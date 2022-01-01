@@ -1,26 +1,71 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
-class FirestoreServices {
-  static FirebaseFirestore firestore = FirebaseFirestore.instance;
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
+final CollectionReference reference = firestore.collection('tweets');
 
-  static Future<void> addTweetToFirestore({
+class DatabaseService {
+  static String? userId;
+
+  static Future<void> addTweet({
     required String title,
-    required String content,
-    required String userId,
+    required String description,
   }) async {
-    var time = DateTime.now();
-    await firestore
-        .collection('tweets')
-        .doc(userId.toString())
-        .collection('myTweets')
-        .doc(time.toString())
-        .set({
-      'title': title,
-      'content': content,
-      'time': time.toString(),
-      'timestamp': time
-    });
-    Fluttertoast.showToast(msg: 'Tweet Added');
+    DocumentReference documentReferencer = reference.doc(userId);
+
+    Map<String, dynamic> data = <String, dynamic>{
+      "title": title,
+      "description": description,
+    };
+
+    await documentReferencer
+        .set(data)
+        .whenComplete(
+          () => print("Tweet added to the database"),
+        )
+        .catchError(
+          (e) => print(e),
+        );
+  }
+
+  static Stream<QuerySnapshot> readItems() {
+    CollectionReference tweetItemsCollection =
+        reference.doc(userId).collection('tweets');
+
+    return tweetItemsCollection.snapshots();
+  }
+
+  static Future<void> updateItem({
+    required String title,
+    required String description,
+    required String docId,
+  }) async {
+    DocumentReference documentReferencer =
+        reference.doc(userId).collection('tweets').doc(docId);
+
+    Map<String, dynamic> data = <String, dynamic>{
+      "title": title,
+      "description": description,
+    };
+
+    await documentReferencer
+        .update(data)
+        .whenComplete(
+          () => print("Note item updated in the database"),
+        )
+        .catchError(
+          (e) => print(e),
+        );
+  }
+
+  static Future<void> deleteItem({
+    required String docId,
+  }) async {
+    DocumentReference documentReferencer =
+        reference.doc(userId).collection('tweets').doc(docId);
+
+    await documentReferencer
+        .delete()
+        .whenComplete(() => print('Note item deleted from the database'))
+        .catchError((e) => print(e));
   }
 }

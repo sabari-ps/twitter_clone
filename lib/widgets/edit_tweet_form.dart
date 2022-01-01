@@ -1,79 +1,51 @@
 import 'package:flutter/material.dart';
-
 import 'package:twitter_clone/firebase/firestore_service.dart';
-import 'package:twitter_clone/firebase/form_validator.dart';
-import 'package:twitter_clone/widgets/custom_form.dart';
 
-class AddScreen extends StatelessWidget {
-  final FocusNode _titleFocusNode = FocusNode();
-  final FocusNode _descriptionFocusNode = FocusNode();
+import 'custom_form.dart';
 
-  AddScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        _titleFocusNode.unfocus();
-        _descriptionFocusNode.unfocus();
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          title: const Text(
-            "Tweet App",
-            style: TextStyle(
-              color: Colors.black,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(
-              left: 16.0,
-              right: 16.0,
-              bottom: 20.0,
-            ),
-            child: AddItemForm(
-              titleFocusNode: _titleFocusNode,
-              descriptionFocusNode: _descriptionFocusNode,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class AddItemForm extends StatefulWidget {
+class EditItemForm extends StatefulWidget {
   final FocusNode titleFocusNode;
   final FocusNode descriptionFocusNode;
+  final String currentTitle;
+  final String currentDescription;
+  final String documentId;
 
-  const AddItemForm({
-    Key? key,
+  const EditItemForm({
     required this.titleFocusNode,
     required this.descriptionFocusNode,
-  }) : super(key: key);
+    required this.currentTitle,
+    required this.currentDescription,
+    required this.documentId,
+  });
 
   @override
-  _AddItemFormState createState() => _AddItemFormState();
+  _EditItemFormState createState() => _EditItemFormState();
 }
 
-class _AddItemFormState extends State<AddItemForm> {
-  final _addItemFormKey = GlobalKey<FormState>();
+class _EditItemFormState extends State<EditItemForm> {
+  final _editItemFormKey = GlobalKey<FormState>();
 
   bool _isProcessing = false;
 
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+
+  @override
+  void initState() {
+    _titleController = TextEditingController(
+      text: widget.currentTitle,
+    );
+
+    _descriptionController = TextEditingController(
+      text: widget.currentDescription,
+    );
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: _addItemFormKey,
+      key: _editItemFormKey,
       child: Column(
         children: [
           Padding(
@@ -102,11 +74,14 @@ class _AddItemFormState extends State<AddItemForm> {
                   focusNode: widget.titleFocusNode,
                   keyboardType: TextInputType.text,
                   inputAction: TextInputAction.next,
-                  validator: (value) => FormValidator.validateName(
-                    name: value,
-                  ),
+                  validator: (value) {
+                    if (value == "") {
+                      return "Title is empty!";
+                    }
+                    return null;
+                  },
                   label: 'Title',
-                  hint: 'Enter your note title',
+                  hint: 'Enter your tweet title',
                 ),
                 const SizedBox(height: 24.0),
                 const Text(
@@ -164,12 +139,13 @@ class _AddItemFormState extends State<AddItemForm> {
                       widget.titleFocusNode.unfocus();
                       widget.descriptionFocusNode.unfocus();
 
-                      if (_addItemFormKey.currentState!.validate()) {
+                      if (_editItemFormKey.currentState!.validate()) {
                         setState(() {
                           _isProcessing = true;
                         });
 
-                        await DatabaseService.addTweet(
+                        await DatabaseService.updateItem(
+                          docId: widget.documentId,
                           title: _titleController.text,
                           description: _descriptionController.text,
                         );
@@ -184,11 +160,11 @@ class _AddItemFormState extends State<AddItemForm> {
                     child: const Padding(
                       padding: EdgeInsets.only(top: 16.0, bottom: 16.0),
                       child: Text(
-                        'ADD ITEM',
+                        'UPDATE ITEM',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.grey,
                           letterSpacing: 2,
                         ),
                       ),

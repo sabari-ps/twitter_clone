@@ -7,6 +7,8 @@ import 'package:twitter_clone/firebase/firestore_service.dart';
 import 'package:twitter_clone/screens/add_tweet.dart';
 import 'package:twitter_clone/screens/login_screen.dart';
 
+import 'edit_tweet.dart';
+
 class HomeScreen extends StatefulWidget {
   final User currentUser;
 
@@ -20,8 +22,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  CollectionReference tweets = FirestoreServices.firestore.collection('tweets');
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,33 +55,60 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: FutureBuilder(
-        future: tweets
-            .doc(widget.currentUser.uid.toString())
-            .collection('myTweets')
-            .get(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: DatabaseService.readItems(),
         builder: (context, snapshot) {
-          Map<String, dynamic> userTweets =
-              snapshot.data! as Map<String, dynamic>;
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
+          if (snapshot.hasError) {
+            return const Text('Something went wrong');
+          } else if (snapshot.hasData || snapshot.data != null) {
+            return ListView.separated(
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 16.0),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                String docID = snapshot.data!.docs[index].id;
+                String title = snapshot.data!.docs[index]['title'];
+                String description = snapshot.data!.docs[index]['description'];
+
+                return Ink(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EditScreen(
+                          currentTitle: title,
+                          currentDescription: description,
+                          documentId: docID,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                );
+              },
             );
           }
-          if (snapshot.hasError) {
-            return const Text("Something went wrong");
-          }
 
-          if (!snapshot.hasData) {
-            return const Text("Document does not exist");
-          }
-          return ListView.builder(
-            itemCount: userTweets.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: userTweets['title'],
-              );
-            },
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Colors.orange,
+              ),
+            ),
           );
         },
       ),
@@ -89,10 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => AddEditTweet(
-                user: widget.currentUser,
-                mode: 1,
-              ),
+              builder: (context) => AddScreen(),
             ),
           );
         },
